@@ -115,7 +115,7 @@ static void write_embedded(FILE *fp, const char *filename,
 
   char varname[256];
   if (strlen(filename) >= sizeof(varname)) {
-    error("filename too long\n");
+    error("filename too long");
   }
   safename(varname, filename);
 
