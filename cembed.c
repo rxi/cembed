@@ -26,7 +26,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#define VERSION "v0.1"
+#define VERSION "v0.2"
 
 
 typedef struct {
