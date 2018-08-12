@@ -106,7 +106,7 @@ static void write_byte_string(BufferedFile *bf, unsigned char n) {
 
 
 static void write_embedded(FILE *fp, const char *filename,
-  const char *varprefix, int nostatic)
+  const char *varprefix, int nostatic, int zerobyte)
 {
   FILE *infp = fopen(filename, "rb");
   if (!infp) {
@@ -135,6 +135,7 @@ static void write_embedded(FILE *fp, const char *filename,
   }
 
   bf_flush(&bf);
+  if (zerobyte) { fprintf(fp, ",0"); }
   fprintf(fp, "\n};\n\n");
 
   fclose(infp);
@@ -149,6 +150,7 @@ static void print_help(void) {
     "  -o <filename>  output file\n"
     "  -p <prefix>    prefix to place before variable names\n"
     "  -s             omits `static` keyword\n"
+    "  -z             adds zero byte to end of array\n"
     "  -h             display this help message\n"
     "  -v             display version number\n");
 }
@@ -161,6 +163,7 @@ int main(int argc, char **argv) {
   /* defaults */
   const char *outfile = NULL;
   const char *prefix = "";
+  int zerobyte = 0;
   int nostatic = 0;
 
   /* handle options */
@@ -178,6 +181,10 @@ int main(int argc, char **argv) {
 
       case 's':
         nostatic = 1;
+        break;
+
+      case 'z':
+        zerobyte = 1;
         break;
 
       case 'o':
@@ -212,7 +219,7 @@ int main(int argc, char **argv) {
 
   /* write files */
   while (arg != arg_end) {
-    write_embedded(fp, *arg, prefix, nostatic);
+    write_embedded(fp, *arg, prefix, nostatic, zerobyte);
     arg++;
   }
 
