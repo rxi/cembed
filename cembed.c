@@ -27,7 +27,7 @@
 #include <ctype.h>
 
 #define VERSION "v0.2"
-
+#define MAX_FILENAME 256
 
 typedef struct {
   FILE *fp;
@@ -113,8 +113,8 @@ static void write_embedded(FILE *fp, const char *filename,
     error("failed to open file '%s'", filename);
   }
 
-  char varname[256];
-  if (strlen(filename) >= sizeof(varname)) {
+  char varname[MAX_FILENAME];
+  if (strlen(filename) >= MAX_FILENAME) {
     error("filename too long");
   }
   safename(varname, filename);
@@ -149,8 +149,9 @@ static void print_help(void) {
     "\n"
     "  -o <filename>  output file\n"
     "  -p <prefix>    prefix to place before variable names\n"
-    "  -s             omits `static` keyword\n"
-    "  -z             adds zero byte to end of array\n"
+    "  -s             omit `static` keyword\n"
+    "  -z             add zero byte to end of array\n"
+    "  -t <name>      create table of { filename, data, size }\n"
     "  -h             display this help message\n"
     "  -v             display version number\n");
 }
@@ -163,6 +164,7 @@ int main(int argc, char **argv) {
   /* defaults */
   const char *outfile = NULL;
   const char *prefix = "";
+  const char *tablename = NULL;
   int zerobyte = 0;
   int nostatic = 0;
 
@@ -185,6 +187,12 @@ int main(int argc, char **argv) {
 
       case 'z':
         zerobyte = 1;
+        break;
+
+      case 't':
+        arg++;
+        if (arg == arg_end) { error("expected name after option '-t'"); }
+        tablename = *arg;
         break;
 
       case 'o':
@@ -218,9 +226,24 @@ int main(int argc, char **argv) {
   if (!fp) { error("failed to open output file '%s'", outfile); }
 
   /* write files */
-  while (arg != arg_end) {
-    write_embedded(fp, *arg, prefix, nostatic, zerobyte);
-    arg++;
+  for (char **a = arg; a < arg_end; a++) {
+    write_embedded(fp, *a, prefix, nostatic, zerobyte);
+  }
+
+  /* write table */
+  if (tablename) {
+    if (!nostatic) { fprintf(fp, "static "); }
+    fprintf(fp, "struct { char *filename; unsigned char *data; int size; } ");
+    fprintf(fp, "%s[] = {\n", tablename);
+    for (char **a = arg; a < arg_end; a++) {
+      char varname[MAX_FILENAME];
+      safename(varname, *a);
+      fprintf(fp, "{ \"%s\", %s, (int) sizeof(%s) ", *a, varname, varname);
+      if (zerobyte) { fprintf(fp, "- 1 "); }
+      fprintf(fp, "},\n");
+    }
+    fprintf(fp, "{ 0 }\n");
+    fprintf(fp, "};\n");
   }
 
   /* clean up */
